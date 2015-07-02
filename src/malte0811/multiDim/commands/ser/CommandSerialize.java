@@ -2,7 +2,6 @@ package malte0811.multiDim.commands.ser;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.ObjectOutputStream;
 
 import malte0811.multiDim.addons.Command;
 import malte0811.multiDim.addons.DimRegistry;
@@ -19,9 +18,9 @@ public class CommandSerialize extends Command {
 		String s = DimRegistry.getFileSeperator();
 		File f = new File(DimRegistry.getUserDir() + s + "solids" + s + args[0]);
 		FileOutputStream fos = new FileOutputStream(f);
-		ObjectOutputStream oos = new ObjectOutputStream(fos);
-		oos.writeObject(DimRegistry.getCalcThread().getSolid());
-		oos.close();
+		SolidSerializer.writeSolid(fos, DimRegistry.getCalcThread().getSolid());
+		fos.flush();
+		fos.close();
 	}
 
 	@Override

@@ -14,21 +14,20 @@ public abstract class Solid implements Serializable {
 	public double[][] vertices;
 	public int[][] edges;
 	public int[][] sides;
-	private HashMap<String, Object> data = new HashMap<>();
+	private HashMap<String, Serializable> data = new HashMap<>();
 
 	public void rotate(int firstAxis, int secondAxis, double degree) {
-		if (firstAxis < 0) {
-			System.out.println("The axis " + firstAxis
-					+ " does not exist. The smallest number for an axis is 0.");
+		if (firstAxis < 0 || firstAxis >= vertices[0].length) {
+			System.out.println("The axis " + firstAxis + " does not exist.");
 			return;
-		} else if (secondAxis < 0) {
-			System.out.println("The axis " + secondAxis
-					+ " does not exist. The smallest number for an axis is 0.");
+		} else if (secondAxis < 0 || secondAxis >= vertices[0].length) {
+			System.out.println("The axis " + secondAxis + " does not exist.");
 			return;
 		}
+
 		int maxV = firstAxis > secondAxis ? firstAxis : secondAxis;
 		maxV++;
-		double radsadd = Math.toRadians(degree);
+		double radians = -Math.toRadians(degree);
 		double[][] vTMP = getCopyOfVertices(maxV);
 		if (vTMP.length == 0 || vTMP[0].length < maxV) {
 			return;
@@ -36,13 +35,8 @@ public abstract class Solid implements Serializable {
 		for (double[] vertex : vTMP) {
 			double x = vertex[firstAxis];
 			double y = vertex[secondAxis];
-			double radOld = x == 0 ? y < 0 ? Math.toRadians(-90) : Math
-					.toRadians(90) : Math.atan(y / x);
-			radOld += x < 0 ? Math.toRadians(180) : 0;
-			double radNew = radOld + radsadd;
-			double r = Math.sqrt(x * x + y * y);
-			vertex[firstAxis] = r * Math.cos(radNew);
-			vertex[secondAxis] = r * Math.sin(radNew);
+			vertex[firstAxis] = Math.cos(radians) * x - Math.sin(radians) * y;
+			vertex[secondAxis] = Math.sin(radians) * x + Math.cos(radians) * y;
 		}
 		vertices = vTMP;
 	}
@@ -178,11 +172,11 @@ public abstract class Solid implements Serializable {
 
 	public abstract boolean isColored();
 
-	public void addProperty(String name, Object val) {
+	public void addProperty(String name, Serializable val) {
 		data.put(name, val);
 	}
 
-	public Object getProperty(String name) {
+	public Serializable getProperty(String name) {
 		if (data.containsKey(name)) {
 			return data.get(name);
 		}

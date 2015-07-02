@@ -50,17 +50,20 @@ public class NDSphere extends Solid {
 				z++;
 			}
 		}
-		while (2 * z < sides.length) {
+		while (2 * z + oldSLength < sides.length) {
 			sides[2 * z + oldSLength] = new int[3];
 			sides[2 * z + oldSLength + 1] = new int[3];
 			z++;
 		}
 		edges = Arrays.copyOf(edges, oldELength + vertices.length - oldLength);
-
-		for (int i = 0; i < vertices.length - oldLength; i++) {
+		int i = 0;
+		for (; i < vertices.length - oldLength; i++) {
 			edges[i + oldELength] = new int[2];
 			edges[i + oldELength][0] = i;
 			edges[i + oldELength][1] = (i + oldLength) % vertices.length;
+		}
+		for (; i + oldELength < edges.length; i++) {
+			edges[i + oldELength] = new int[2];
 		}
 	}
 

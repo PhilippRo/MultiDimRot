@@ -4,12 +4,10 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InvalidClassException;
-import java.io.ObjectInputStream;
 import java.util.ArrayList;
 
 import malte0811.multiDim.addons.Command;
 import malte0811.multiDim.addons.DimRegistry;
-import malte0811.multiDim.solids.Solid;
 
 public class CommandDeserialize extends Command {
 
@@ -25,10 +23,9 @@ public class CommandDeserialize extends Command {
 		try {
 			File f = new File(DimRegistry.getUserDir() + sep + "solids" + sep
 					+ args[0]);
-			FileInputStream fos = new FileInputStream(f);
-			ObjectInputStream oos = new ObjectInputStream(fos);
-			DimRegistry.getCalcThread().setSolid((Solid) oos.readObject());
-			oos.close();
+			FileInputStream fis = new FileInputStream(f);
+			DimRegistry.getCalcThread()
+					.setSolid(SolidSerializer.readSolid(fis));
 		} catch (FileNotFoundException e) {
 			System.out.println("The file " + System.getProperty("user.dir")
 					+ sep + "solids" + sep + args[0] + " does not exist.");
@@ -39,14 +36,9 @@ public class CommandDeserialize extends Command {
 					+ " does not contain a valid solid.");
 			return;
 		} catch (InvalidClassException x) {
-			System.out
-					.println("The file: "
-							+ System.getProperty("user.dir")
-							+ sep
-							+ "solids"
-							+ sep
-							+ args[0]
-							+ " does not contain a valid solid. It may have been created by an older version of MultiDimRot.");
+			System.out.println("The file: " + System.getProperty("user.dir")
+					+ sep + "solids" + sep + args[0]
+					+ " does not contain a valid solid.");
 			return;
 		}
 
