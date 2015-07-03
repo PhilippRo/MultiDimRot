@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 
 import malte0811.multiDim.addons.Command;
 import malte0811.multiDim.addons.DimRegistry;
+import malte0811.multiDim.solids.SolidSerializer;
 
 public class CommandSerialize extends Command {
 

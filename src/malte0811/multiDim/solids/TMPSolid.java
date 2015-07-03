@@ -3,11 +3,21 @@ package malte0811.multiDim.solids;
 import java.util.Arrays;
 
 public class TMPSolid extends Solid {
+	boolean colored;
+	float[][] colors;
 
 	public TMPSolid(int[][] edgesA, double[][] verticesA, int[][] sidesA) {
 		edges = edgesA;
 		vertices = verticesA;
 		sides = sidesA;
+	}
+
+	public TMPSolid(int[][] edgesA, double[][] verticesA, int[][] sidesA,
+			float[][] colorsA) {
+		edges = edgesA;
+		vertices = verticesA;
+		sides = sidesA;
+		colors = colorsA;
 	}
 
 	@Override
@@ -32,12 +42,12 @@ public class TMPSolid extends Solid {
 
 	@Override
 	public float[][] getColors() {
-		return null;
+		return colors;
 	}
 
 	@Override
 	public boolean isColored() {
-		return false;
+		return colored;
 	}
 
 	@Override

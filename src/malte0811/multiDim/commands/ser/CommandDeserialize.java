@@ -8,6 +8,7 @@ import java.util.ArrayList;
 
 import malte0811.multiDim.addons.Command;
 import malte0811.multiDim.addons.DimRegistry;
+import malte0811.multiDim.solids.SolidSerializer;
 
 public class CommandDeserialize extends Command {
 

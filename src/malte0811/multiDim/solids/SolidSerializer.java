@@ -1,4 +1,4 @@
-package malte0811.multiDim.commands.ser;
+package malte0811.multiDim.solids;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -9,9 +9,6 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Set;
 
-import malte0811.multiDim.solids.Solid;
-import malte0811.multiDim.solids.TMPSolid;
-
 public class SolidSerializer {
 	public static final int version = 0;
 
@@ -21,10 +18,12 @@ public class SolidSerializer {
 	// int: edgeCount
 	// int: sideCount
 	// int: propertyCount
+	// boolean: colored
 	// double*(dimensions*vertexCount) vertices: vertices[0][0], vertices[0][1],
 	// etc
 	// int*(2*edgeCount) edges: edges[0][0], edges[0][1], etc
 	// int*(3*sideCount) sides: sides[0][0], sides[0][1], etc
+	// if colored (float*(3*edgeCount): colors)
 	// String, Serializeable: Properties
 	public static Solid readSolid(InputStream in) throws IOException,
 			ClassNotFoundException {
@@ -35,10 +34,7 @@ public class SolidSerializer {
 		int edgeCount = dis.readInt();
 		int sideCount = dis.readInt();
 		int propertyCount = dis.readInt();
-		// DEBUG
-		System.out.println("dimensions: " + dimensions);
-		System.out.println("vertices: " + vertexCount);
-		System.out.println("edges: " + edgeCount);
+		boolean colored = dis.readBoolean();
 		// vertices
 		double[][] vertices = new double[vertexCount][dimensions];
 		for (int v = 0; v < vertexCount; v++) {
@@ -59,12 +55,25 @@ public class SolidSerializer {
 			sides = new int[sideCount][3];
 			for (int s = 0; s < sideCount; s++) {
 				for (int v = 0; v < 3; v++) {
-					edges[s][v] = dis.readInt();
+					sides[s][v] = dis.readInt();
+				}
+			}
+		}
+		float[][] colors = new float[edgeCount][3];
+		if (colored) {
+			for (int e = 0; e < edgeCount; e++) {
+				for (int c = 0; c < 3; c++) {
+					colors[e][c] = dis.readFloat();
 				}
 			}
 		}
 		// properties
-		Solid ret = new TMPSolid(edges, vertices, sides);
+		Solid ret;
+		if (colored) {
+			ret = new TMPSolid(edges, vertices, sides, colors);
+		} else {
+			ret = new TMPSolid(edges, vertices, sides);
+		}
 		for (int p = 0; p < propertyCount; p++) {
 			ret.addProperty((String) dis.readObject(),
 					(Serializable) dis.readObject());
@@ -78,12 +87,16 @@ public class SolidSerializer {
 		double[][] vertices = s.getVertices();
 		int[][] edges = s.getEdges();
 		int[][] sides = s.getSides();
+		float[][] colors = s.getColors();
+		boolean colored = colors != null;
 		HashMap<String, Serializable> prop = new HashMap<>();
 		int dimensions = vertices.length > 0 ? vertices[0].length : 0;
 		oos.writeInt(dimensions);
 		oos.writeInt(vertices.length);
 		oos.writeInt(edges.length);
 		oos.writeInt(sides != null ? sides.length : -1);
+		oos.writeInt(prop.size());
+		oos.writeBoolean(colored);
 		// vertices
 		for (double[] v : vertices) {
 			for (double i : v) {
@@ -103,14 +116,20 @@ public class SolidSerializer {
 				oos.writeInt(side[2]);
 			}
 		}
+		// colors
+		if (colored) {
+			for (float[] e : colors) {
+				oos.writeFloat(e[0]);
+				oos.writeFloat(e[1]);
+				oos.writeFloat(e[2]);
+			}
+		}
 		// properties
 		Set<String> keys = prop.keySet();
 		for (String k : keys) {
 			oos.writeObject(k);
 			oos.writeObject(prop.get(k));
 		}
-		// DEBUG
-		oos.writeInt(0);
 		oos.flush();
 		oos.close();
 	}
