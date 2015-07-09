@@ -23,6 +23,7 @@ import malte0811.multiDim.addons.Command;
 import malte0811.multiDim.addons.DimRegistry;
 import malte0811.multiDim.addons.TickHandler;
 import malte0811.multiDim.commands.programs.Programm;
+import malte0811.multiDim.render.CentralThree;
 import malte0811.multiDim.render.ParallelRender;
 import malte0811.multiDim.render.RenderAlgo;
 import malte0811.multiDim.solids.Solid;
@@ -46,6 +47,8 @@ public class CalcThread implements Runnable {
 	private CommandListener c;
 	private ArrayDeque<String> commands = new ArrayDeque<>();
 	private boolean showSides = true;
+	private boolean lagLogged;
+	private int lagDelay;
 
 	public CalcThread(Solid s) {
 		solid = s;
@@ -176,6 +179,27 @@ public class CalcThread implements Runnable {
 			Display.update();
 			try {
 				long tDiff = System.currentTimeMillis() - time;
+				if (tDiff > 500) {
+					if (!lagLogged) {
+						if (CentralThree.fancy) {
+							System.out
+									.println("The calculation tick took more than half a second. Type \"toggleFancySides\" to disable fancy side rendering to save calculation time.");
+						} else if (showSides) {
+							System.out
+									.println("The calculation tick took more than half a second. Type \"toggleSides\" to disable side rendering to save calculation time.");
+						} else {
+							System.out
+									.println("The calculation tick took more than half a second.");
+						}
+						lagDelay = 100;
+						lagLogged = true;
+					}
+				} else if (lagLogged) {
+					lagDelay--;
+					if (lagDelay <= 0) {
+						lagLogged = false;
+					}
+				}
 				DebugHandler.getInstance().addTime(3, (int) tDiff);
 				Thread.sleep(100 - (tDiff > 100 ? 0 : tDiff));
 			} catch (InterruptedException e) {
