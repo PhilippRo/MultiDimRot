@@ -17,10 +17,10 @@ public abstract class Solid implements Serializable {
 	private HashMap<String, Serializable> data = new HashMap<>();
 
 	public void rotate(int firstAxis, int secondAxis, double degree) {
-		if (firstAxis < 0 || firstAxis >= vertices[0].length) {
+		if (firstAxis < 0) {
 			System.out.println("The axis " + firstAxis + " does not exist.");
 			return;
-		} else if (secondAxis < 0 || secondAxis >= vertices[0].length) {
+		} else if (secondAxis < 0) {
 			System.out.println("The axis " + secondAxis + " does not exist.");
 			return;
 		}

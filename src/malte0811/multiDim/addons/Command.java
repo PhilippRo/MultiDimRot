@@ -6,7 +6,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 
-import malte0811.multiDim.CommandListener;
 import malte0811.multiDim.commands.CommandBackground;
 import malte0811.multiDim.commands.CommandChangeRenderAlgo;
 import malte0811.multiDim.commands.CommandChangeRenderOption;
@@ -27,6 +26,7 @@ import malte0811.multiDim.commands.CommandSetSize;
 import malte0811.multiDim.commands.CommandToggleFancyRender;
 import malte0811.multiDim.commands.CommandToggleSides;
 import malte0811.multiDim.commands.CommandToggleTickHandler;
+import malte0811.multiDim.commands.CommandToggleVertices;
 import malte0811.multiDim.commands.CommandUpdate;
 import malte0811.multiDim.commands.CommandZoom;
 import malte0811.multiDim.commands.LayeredStringTokenizer;
@@ -93,6 +93,7 @@ public abstract class Command {
 		register(new CommandShowFunction());
 		register(new CommandShowRecursiveFunction());
 		register(new CommandMirror());
+		register(new CommandToggleVertices());
 
 		try {
 			// only load if exists, so it doesnt appear in the master branch

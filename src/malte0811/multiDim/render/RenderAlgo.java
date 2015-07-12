@@ -12,8 +12,15 @@ import org.lwjgl.opengl.GL30;
 import org.lwjgl.util.glu.GLU;
 
 public abstract class RenderAlgo {
+	public static int vertexShaderId;
 	public static int mainShaderId;
 	public static int sideShaderId;
+	public static boolean renderVertices = true;
+	final static String vertexShaderVertices = "#version 150 core\r\n"
+			+ "in vec2 in_Position;\r\n" + "out vec4 pass_Color;\r\n"
+			+ "void main(void) {\r\n"
+			+ "gl_Position = vec4(in_Position.x, in_Position.y, 0, 1);\r\n"
+			+ "pass_Color = vec4(0, 1, 0, 1);\r\n" + "}";
 	final static String vertexShaderEdges = "#version 150 core\r\n"
 			+ "in vec4 in_Position;\r\n" + "in vec4 in_Color;\r\n"
 			+ "out vec4 pass_Color;\r\n" + "void main(void) {\r\n"
@@ -34,8 +41,22 @@ public abstract class RenderAlgo {
 			double[] options, float[][] colors, int[][] sides);
 
 	public static void init() {
-		int vsId = loadShader(vertexShaderEdges, GL20.GL_VERTEX_SHADER);
+		int vsId = loadShader(vertexShaderVertices, GL20.GL_VERTEX_SHADER);
 		int frId = loadShader(fragShader, GL20.GL_FRAGMENT_SHADER);
+		vertexShaderId = GL20.glCreateProgram();
+		GL20.glAttachShader(vertexShaderId, vsId);
+		GL20.glAttachShader(vertexShaderId, frId);
+		GL20.glBindAttribLocation(vertexShaderId, 0, "in_Position");
+		GL20.glLinkProgram(vertexShaderId);
+		GL20.glValidateProgram(vertexShaderId);
+		int error;
+		if ((error = GL11.glGetError()) != GL11.GL_NO_ERROR) {
+			System.out.println("ERROR - Could not create vertex shaders:"
+					+ GLU.gluErrorString(error));
+			System.exit(-1);
+		}
+		System.out.println("Loaded edge shaders: " + mainShaderId);
+		vsId = loadShader(vertexShaderEdges, GL20.GL_VERTEX_SHADER);
 		mainShaderId = GL20.glCreateProgram();
 		GL20.glAttachShader(mainShaderId, vsId);
 		GL20.glAttachShader(mainShaderId, frId);
@@ -43,7 +64,6 @@ public abstract class RenderAlgo {
 		GL20.glBindAttribLocation(mainShaderId, 1, "in_Color");
 		GL20.glLinkProgram(mainShaderId);
 		GL20.glValidateProgram(mainShaderId);
-		int error;
 		if ((error = GL11.glGetError()) != GL11.GL_NO_ERROR) {
 			System.out.println("ERROR - Could not create edge shaders:"
 					+ GLU.gluErrorString(error));
@@ -75,6 +95,8 @@ public abstract class RenderAlgo {
 	}
 
 	protected void renderNoColor(float[][] rV, int[][] edges, int shader) {
+		if (renderVertices)
+			renderVertices(rV);
 		IntBuffer indices = BufferUtils.createIntBuffer(2 * edges.length);
 		float[] tmp = { 0, 1 };
 		FloatBuffer interL = BufferUtils.createFloatBuffer(8 * rV.length);
@@ -109,7 +131,6 @@ public abstract class RenderAlgo {
 		int vboInterId = GL15.glGenBuffers();
 		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, vboInterId);
 		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, interL, GL15.GL_STATIC_DRAW);
-		// Put the VBO in the attributes list at index 0
 		GL20.glVertexAttribPointer(0, 4, GL11.GL_FLOAT, false, 32, 0);
 		GL20.glVertexAttribPointer(1, 4, GL11.GL_FLOAT, false, 32, 16);
 		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
@@ -118,31 +139,28 @@ public abstract class RenderAlgo {
 		GL20.glEnableVertexAttribArray(0);
 		GL20.glEnableVertexAttribArray(1);
 		GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, vboiId);
-		// Draw the vertices
 		GL11.glDrawElements(GL11.GL_LINES, i2, GL11.GL_UNSIGNED_INT, 0);
 		GL20.glUseProgram(0);
-		// deselect
 		GL20.glDisableVertexAttribArray(0);
 		GL30.glBindVertexArray(0);
-		// Deselect (bind to 0) the VAO
 		GL30.glBindVertexArray(0);
-		// Disable the VBO index from the VAO attributes list
 		GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, 0);
 		GL20.glDisableVertexAttribArray(0);
 		GL20.glDisableVertexAttribArray(1);
-		// Delete the VBO
 		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
 		GL15.glDeleteBuffers(vboInterId);
-		// Delete the VAO
 		GL30.glBindVertexArray(0);
 		GL30.glDeleteVertexArrays(vaoId);
-		// Delete the index VBO
 		GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, 0);
 		GL15.glDeleteBuffers(vboiId);
+		if (renderVertices)
+			renderVertices(rV);
 	}
 
 	protected void renderColor(float[][] rV, int[][] edges, float[][] colors,
 			int shader) {
+		if (renderVertices)
+			renderVertices(rV);
 		IntBuffer vboI = BufferUtils.createIntBuffer(2 * edges.length);
 		for (int i = 0; i < 2 * edges.length; i++) {
 			vboI.put(i);
@@ -181,15 +199,12 @@ public abstract class RenderAlgo {
 		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, vboId);
 		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, verticesBuffer,
 				GL15.GL_STATIC_DRAW);
-		// Put the VBO in the attributes list at index 0
 		GL20.glVertexAttribPointer(0, 4, GL11.GL_FLOAT, false, 0, 0);
 		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
-		// colors
 		int vbocId = GL15.glGenBuffers();
 		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, vbocId);
 		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, colorsBuf, GL15.GL_STATIC_DRAW);
 		GL20.glVertexAttribPointer(1, 4, GL11.GL_FLOAT, false, 0, 0);
-		// Deselect (bind to 0) the VBO
 		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
 		GL30.glBindVertexArray(0);
 		int vboiId = GL15.glGenBuffers();
@@ -202,26 +217,56 @@ public abstract class RenderAlgo {
 		GL20.glEnableVertexAttribArray(0);
 		GL20.glEnableVertexAttribArray(1);
 		GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, vboiId);
-		// Draw the vertices
 		GL11.glDrawElements(GL11.GL_LINES, anzV, GL11.GL_UNSIGNED_INT, 0);
 		GL20.glUseProgram(0);
-		// deselect
 		GL20.glDisableVertexAttribArray(0);
 		GL20.glDisableVertexAttribArray(1);
-		// Deselect (bind to 0) the VAO
 		GL30.glBindVertexArray(0);
-		// Disable the VBO index from the VAO attributes list
 		GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, 0);
 		GL20.glDisableVertexAttribArray(0);
-		// Delete the VBO
 		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
 		GL15.glDeleteBuffers(vboId);
-		// Delete the VAO
 		GL30.glBindVertexArray(0);
 		GL30.glDeleteVertexArrays(vaoId);
-		// Delete the index VBO
 		GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, 0);
 		GL15.glDeleteBuffers(vbocId);
+	}
+
+	public void renderVertices(float[][] vertices) {
+		FloatBuffer vertexBuf = BufferUtils
+				.createFloatBuffer(vertices.length * 2);
+		for (float[] d : vertices) {
+			vertexBuf.put(d[0]);
+			vertexBuf.put(d[1]);
+		}
+		vertexBuf.flip();
+		int bufId = GL15.glGenBuffers();
+		GL15.glBufferData(bufId, vertexBuf, GL15.GL_STATIC_DRAW);
+
+		int vaoId = GL30.glGenVertexArrays();
+		GL30.glBindVertexArray(vaoId);
+		int vboId = GL15.glGenBuffers();
+		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, vboId);
+		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, vertexBuf, GL15.GL_STATIC_DRAW);
+		GL20.glVertexAttribPointer(0, 2, GL11.GL_FLOAT, false, 0, 0);
+		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
+		GL30.glBindVertexArray(0);
+		GL20.glUseProgram(vertexShaderId);
+		GL30.glBindVertexArray(vaoId);
+		GL20.glEnableVertexAttribArray(0);
+		GL20.glEnableVertexAttribArray(1);
+		GL11.glDrawArrays(GL11.GL_POINTS, 0, vertices.length);
+		GL20.glUseProgram(0);
+		GL20.glDisableVertexAttribArray(0);
+		GL20.glDisableVertexAttribArray(1);
+		GL30.glBindVertexArray(0);
+		GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, 0);
+		GL20.glDisableVertexAttribArray(0);
+		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
+		GL15.glDeleteBuffers(vboId);
+		GL30.glBindVertexArray(0);
+		GL30.glDeleteVertexArrays(vaoId);
+		GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, 0);
 	}
 
 	public float[][] getDensity(int[][][] triangles, double[][] vertices3d,
@@ -406,23 +451,17 @@ public abstract class RenderAlgo {
 		GL20.glUseProgram(sideShaderId);
 		GL20.glEnableVertexAttribArray(0);
 		GL20.glEnableVertexAttribArray(1);
-		// Draw the vertices
 		GL11.glDrawArrays(GL11.GL_POINTS, 0, count);
 		GL20.glUseProgram(0);
-		// deselect
 		GL20.glDisableVertexAttribArray(0);
 		GL20.glDisableVertexAttribArray(1);
-		// Deselect (bind to 0) the VAO
 		GL30.glBindVertexArray(0);
-		// Disable the VBO index from the VAO attributes list
 		GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, 0);
 		GL20.glDisableVertexAttribArray(0);
-		// Delete the VBO
 		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
 		GL15.glDeleteBuffers(vboId);
 		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
 		GL15.glDeleteBuffers(densVbo);
-		// Delete the VAO
 		GL30.glBindVertexArray(0);
 		GL30.glDeleteVertexArrays(vaoId);
 	}
