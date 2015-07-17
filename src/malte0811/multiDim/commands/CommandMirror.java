@@ -13,8 +13,7 @@ public class CommandMirror extends Command {
 
 	@Override
 	public String getCommandUsage() {
-		// TODO Auto-generated method stub
-		return null;
+		return "\"mirror [dimension]\" mirrors the solid. If no dimension  is given, the solid will be mirrored in every direction, otherwise all coordinates of the given dimension are multiplied by -1.";
 	}
 
 	@Override
