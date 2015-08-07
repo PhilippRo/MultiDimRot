@@ -272,6 +272,9 @@ public abstract class RenderAlgo {
 	public float[][] getDensity(int[][][] triangles, double[][] vertices3d,
 			int[][] sides, double fov, double dist, boolean improved) {
 		float[][] dens = new float[Display.getWidth()][Display.getHeight()];
+		double[][] eq = new double[5][6];
+		double[] ret = new double[5];
+		final double zero = 0.0001;
 		for (int i = 0; i < triangles.length; i++) {
 			int[][] tri = triangles[i];
 			if (tri == null) {
@@ -324,86 +327,74 @@ public abstract class RenderAlgo {
 							* (float) x + acS1));
 					float vS2 = (noStS2 ? middleAbove ? max[1] : min[1] : (stS2
 							* (float) x + acS2));
-					if (middleAbove) {
-						// is the current point in the triangle tri?
-						if (vOp <= y && vS1 > y && vS2 > y) {
-							if (improved) {
-								// line:
-								// y = st1*z
-								// x = st2*z
-								double st1 = ((double) (y - Display.getHeight() / 2))
-										/ (double) Display.getHeight() / fov;
-								double st2 = ((double) (x - Display.getWidth() / 2))
-										/ (double) Display.getWidth() / fov;
-								// plane
-								// x = p0[0]+p*(p0[0]-p1[0])+q*(p0[0]-p2[0])
-								// ...
-								// xyzpq
-								// -1 0 st1 0 0 0
-								// 0 -1 st2 0 0 0
-								// 0 0 -1 (p0[2]-p1[2]) (p0[2]-p2[2]) -p0[2]
-								// 0 -1 0 (p0[1]-p1[1]) (p0[1]-p2[1]) -p0[1]
-								// -1 0 0 (p0[0]-p1[0]) (p0[0]-p2[0]) -p0[0]
-								double[] p0 = vertices3d[sides[i][0]];
-								double[] p1 = vertices3d[sides[i][1]];
-								double[] p2 = vertices3d[sides[i][2]];
-								double[][] eq = {
-										{ -1, 0.0001, st1, 0.0001, 0.0001,
-												0.0001 },
-										{ 0.0001, -1, st2, 0, 0, 0 },
-										{ 0.0001, 0.0001, -1, p0[2] - p1[2],
-												p0[2] - p2[2], -p0[2] },
-										{ 0.0001, -1, 0.0001, p0[1] - p1[1],
-												p0[1] - p2[1], -p0[1] },
-										{ -1, 0.0001, 0.0001, p0[0] - p1[0],
-												p0[0] - p2[0], -p0[0] }, };
-								double[] inter = solveLGS(eq);
-								double dist2 = inter[0] * inter[0] + inter[1]
-										* inter[1] + (inter[2] + dist)
-										* (inter[2] + dist);
-								dens[x][y] += 6 / (dist2);
-							} else {
-								dens[x][y]++;
-							}
-						}
-					} else {
-						// is the current point in the triangle tri?
-						if (vOp >= y && vS1 < y && vS2 < y) {
-							if (improved) {
-								double st1 = ((double) (y - Display.getHeight() / 2))
-										/ (double) Display.getHeight() / fov;
-								double st2 = ((double) (x - Display.getWidth() / 2))
-										/ (double) Display.getWidth() / fov;
-								// plane
-								// x = p0[0]+p*(p0[0]-p1[0])+q*(p0[0]-p2[0])
-								// ...
-								// xyzpq
-								// -1 0 st1 0 0 0
-								// 0 -1 st2 0 0 0
-								// 0 0 -1 (p0[2]-p1[2]) (p0[2]-p2[2]) -p0[2]
-								// 0 -1 0 (p0[1]-p1[1]) (p0[1]-p2[1]) -p0[1]
-								// -1 0 0 (p0[0]-p1[0]) (p0[0]-p2[0]) -p0[0]
-								double[] p0 = vertices3d[sides[i][0]];
-								double[] p1 = vertices3d[sides[i][1]];
-								double[] p2 = vertices3d[sides[i][2]];
-								double[][] eq = {
-										{ -1, 0.0001, st1, 0.0001, 0.0001,
-												0.0001 },
-										{ 0.0001, -1, st2, 0, 0, 0 },
-										{ 0.0001, 0.0001, -1, p0[2] - p1[2],
-												p0[2] - p2[2], -p0[2] },
-										{ 0.0001, -1, 0.0001, p0[1] - p1[1],
-												p0[1] - p2[1], -p0[1] },
-										{ -1, 0.0001, 0.0001, p0[0] - p1[0],
-												p0[0] - p2[0], -p0[0] }, };
-								double[] inter = solveLGS(eq);
-								double dist2 = inter[0] * inter[0] + inter[1]
-										* inter[1] + (inter[2] + dist)
-										* (inter[2] + dist);
-								dens[x][y] += 6 / (dist2);
-							} else {
-								dens[x][y]++;
-							}
+					// is the current point in the triangle tri?
+					if ((vOp <= y && vS1 > y && vS2 > y && middleAbove)
+							|| (!middleAbove && vOp >= y && vS1 < y && vS2 < y)) {
+						if (improved) {
+							// line:
+							// y = st1*z
+							// x = st2*z
+							double st1 = ((double) (y - Display.getHeight() / 2))
+									/ (double) Display.getHeight() / fov;
+							double st2 = ((double) (x - Display.getWidth() / 2))
+									/ (double) Display.getWidth() / fov;
+							// plane
+							// x = p0[0]+p*(p0[0]-p1[0])+q*(p0[0]-p2[0])
+							// ...
+							// xyzpq
+							// -1 0 st1 0 0 0
+							// 0 -1 st2 0 0 0
+							// 0 0 -1 (p0[2]-p1[2]) (p0[2]-p2[2]) -p0[2]
+							// 0 -1 0 (p0[1]-p1[1]) (p0[1]-p2[1]) -p0[1]
+							// -1 0 0 (p0[0]-p1[0]) (p0[0]-p2[0]) -p0[0]
+							double[] p0 = vertices3d[sides[i][0]];
+							double[] p1 = vertices3d[sides[i][1]];
+							double[] p2 = vertices3d[sides[i][2]];
+							eq[0][0] = -1;
+							eq[0][1] = zero;
+							eq[0][2] = st1;
+							eq[0][3] = zero;
+							eq[0][4] = zero;
+							eq[0][5] = zero;
+							eq[1][0] = zero;
+							eq[1][1] = -1;
+							eq[1][2] = st2;
+							eq[1][3] = 0;
+							eq[1][4] = 0;
+							eq[1][5] = 0;
+							eq[2][0] = zero;
+							eq[2][1] = zero;
+							eq[2][2] = -1;
+							eq[2][3] = p0[2] - p1[2];
+							eq[2][4] = p0[2] - p2[2];
+							eq[2][5] = -p0[2];
+							eq[3][0] = zero;
+							eq[3][1] = -1;
+							eq[3][2] = zero;
+							eq[3][3] = p0[1] - p1[1];
+							eq[3][4] = p0[1] - p2[1];
+							eq[3][5] = -p0[1];
+							eq[4][0] = -1;
+							eq[4][1] = zero;
+							eq[4][2] = zero;
+							eq[4][3] = p0[0] - p1[0];
+							eq[4][4] = p0[0] - p2[0];
+							eq[4][5] = -p0[0];
+
+							// { -1, 0.0001, st1, 0.0001, 0.0001, 0.0001 },
+							// { 0.0001, -1, st2, 0, 0, 0 },
+							// { 0.0001, 0.0001, -1, p0[2] - p1[2],
+							// p0[2] - p2[2], -p0[2] },
+							// { 0.0001, -1, 0.0001, p0[1] - p1[1],
+							// p0[1] - p2[1], -p0[1] },
+							// { -1, 0.0001, 0.0001, p0[0] - p1[0],
+							// p0[0] - p2[0], -p0[0] }
+							solveLGS(eq, ret);
+							double dist2 = ret[0] * ret[0] + ret[1] * ret[1]
+									+ (ret[2] + dist) * (ret[2] + dist);
+							dens[x][y] += 6 / (dist2);
+						} else {
+							dens[x][y]++;
 						}
 					}
 				}
@@ -524,7 +515,7 @@ public abstract class RenderAlgo {
 	 *            the system of equations: system[0] is the first equation, etc.
 	 * @return the solution
 	 */
-	protected double[] solveLGS(double[][] system) {
+	protected void solveLGS(double[][] system, double[] ret) {
 		int varCount = system.length;
 		// transform to triangle
 		for (int i = 0; i < varCount - 1; i++) {
@@ -536,13 +527,14 @@ public abstract class RenderAlgo {
 			}
 		}
 		// solve
-		double[] ret = new double[varCount];
+		if (ret.length != varCount) {
+			ret = new double[varCount];
+		}
 		for (int i = varCount - 1; i >= 0; i--) {
 			for (int i2 = i + 1; i2 < varCount; i2++) {
 				system[i][varCount] -= system[i][i2] * ret[i2];
 			}
 			ret[i] = system[i][varCount] / system[i][i];
 		}
-		return ret;
 	}
 }

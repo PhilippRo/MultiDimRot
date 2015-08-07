@@ -11,7 +11,6 @@ import java.util.Arrays;
 
 import javax.imageio.ImageIO;
 
-import malte0811.multiDim.CommandListener;
 import malte0811.multiDim.addons.DimRegistry;
 import malte0811.multiDim.addons.TickHandler;
 import malte0811.multiDim.solids.Solid;
@@ -58,14 +57,15 @@ public class MediaHandler extends TickHandler {
 
 	@Override
 	public void handleTick(Solid d, double[] renderoptions) {
-		String sep = DimRegistry.getFileSeperator();
 		if (screenShot) {
+			String sep = DimRegistry.getFileSeperator();
 			String file = DimRegistry.getUserDir() + sep + "screenshots" + sep
 					+ Long.toString(System.currentTimeMillis()) + ".jpeg";
 			handleScreenShot(new File(file));
 			screenShot = false;
 		}
 		if (rec) {
+			String sep = DimRegistry.getFileSeperator();
 			if (framesLeft == 0) {
 				String file = DimRegistry.getUserDir() + sep + "tmp" + sep
 						+ "screen";
