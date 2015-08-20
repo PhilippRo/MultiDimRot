@@ -1,6 +1,5 @@
 package malte0811.multiDim.commands.show;
 
-import java.util.Arrays;
 import java.util.HashMap;
 
 import malte0811.multiDim.addons.Command;
@@ -46,8 +45,12 @@ public class CommandShowFunction extends Command {
 			max[i] = Programm.getDoubleValue(args[3 + 3 * i]);
 			step[i] = Programm.getDoubleValue(args[4 + 3 * i]);
 		}
-		double[][] vertices = new double[vertexCount(min, max, step)][dim];
-		int[][] edges = new int[edgeCount(min, max, step)][2];
+		int[] lengths = new int[var];
+		for (int i = 0; i < min.length; i++) {
+			lengths[i] = (int) Math.floor((max[i] - min[i]) / step[i]) + 1;
+		}
+		double[][] vertices = new double[vertexCount(lengths, -1)][dim];
+		int[][] edges = new int[edgeCount(lengths)][2];
 		Programm c = DimRegistry.getCalcThread().getCurrentProgram();
 		HashMap<String, Double> vars = (c == null) ? new HashMap<String, Double>()
 				: c.getDoubleVariables();
@@ -74,16 +77,13 @@ public class CommandShowFunction extends Command {
 			}
 		}
 
-		int[] lengths = new int[var];
-		for (int i = 0; i < min.length; i++) {
-			lengths[i] = (int) Math.floor((max[i] - min[i]) / step[i]) + 1;
-		}
 		int edge = 0;
-		for (int i = 0; i < vertices.length; i++) {
-			for (int d = 0; d < var; d++) {
-				int prod = prod(lengths, 0, d);
+		for (int d = 0; d < var; d++) {
+			int prod = prod(lengths, 0, d);
+			for (int i = 0; i < vertices.length; i++) {
 				if (i + prod < vertices.length
-						&& (d != 0 || (i + 1) / lengths[d] == i / lengths[d])) {
+						&& (((i + prod) / prod) % lengths[d] >= (i / prod)
+								% lengths[d])) {
 					edges[edge][0] = i;
 					edges[edge][1] = i + prod;
 					edge++;
@@ -106,58 +106,27 @@ public class CommandShowFunction extends Command {
 		return true;
 	}
 
-	public int vertexCount(double[] min, double[] max, double[] step) {
+	private int vertexCount(int[] lengths, int exclude) {
 		int ret = 1;
-		for (int i = 0; i < min.length; i++) {
-			ret *= Math.floor((max[i] - min[i]) / step[i]) + 1;
+		for (int i = 0; i < lengths.length; i++) {
+			if (i != exclude) {
+				ret *= lengths[i];
+			}
 		}
 		return ret;
 	}
 
-	public int edgeCount(double[] min, double[] max, double[] step) {
-		int[] stepI = new int[min.length];
-		for (int i = 0; i < min.length; i++) {
-			stepI[i] = (int) Math.floor((max[i] - min[i]) / step[i]) + 1;
-			if (step[i] == 0) {
-				return 0;
-			}
-		}
-		return edgeCount(stepI, new int[] {});
-	}
-
-	private static int edgeCount(int[] step, int[] exclude) {
-		Arrays.sort(exclude);
-		// check for end of recursion
-		boolean return0 = true;
+	private int edgeCount(int[] step) {
+		int ret = 0;
 		for (int i = 0; i < step.length; i++) {
-			if (Arrays.binarySearch(exclude, i) < 0 && step[i] != 0) {
-				return0 = false;
-				break;
-			}
+			ret += vertexCount(step, i) * (step[i] - 1);
 		}
-		if (return0) {
-			return 0;
-		}
-		// recursive calculation
-		int sumNow = 1;
-		int add = 0;
-		for (int i = 0; i < step.length; i++) {
-			if (Arrays.binarySearch(exclude, i) < 0) {
-				sumNow *= step[i];
-				if (exclude.length == 0 || exclude[exclude.length - 1] < i) {
-					int[] excludeNow = Arrays.copyOf(exclude,
-							exclude.length + 1);
-					excludeNow[exclude.length] = i;
-					add += edgeCount(step, excludeNow);
-				}
-			}
-		}
-		return sumNow * (step.length - exclude.length) + add;
+		return ret;
 	}
 
 	private int prod(int[] in, int start, int end) {
 		int ret = 1;
-		for (int i = start; i < end; i++) {
+		for (int i = start; i < Math.min(end, in.length); i++) {
 			ret *= in[i];
 		}
 		return ret;
