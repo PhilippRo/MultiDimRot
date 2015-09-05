@@ -272,9 +272,18 @@ public abstract class RenderAlgo {
 	public float[][] getDensity(int[][][] triangles, double[][] vertices3d,
 			int[][] sides, double fov, double dist, boolean improved) {
 		float[][] dens = new float[Display.getWidth()][Display.getHeight()];
-		double[][] eq = new double[5][6];
-		double[] ret = new double[5];
-		final double zero = 0.0001;
+		double[][] eq = new double[3][4];
+		double[] sol = new double[3];
+		double[] sol2 = new double[3];
+		double[] planeVec1 = new double[3];
+		double[] planeVec2 = new double[3];
+		double[] planeVec3 = new double[3];
+		double[] lineVec1 = new double[3];
+		double[] lineVec2 = new double[3];
+		double zero = .0001;
+		// distance to screen in direction 2 is dist
+		// TODO minus or plus?
+		lineVec1[2] = -dist;
 		for (int i = 0; i < triangles.length; i++) {
 			int[][] tri = triangles[i];
 			if (tri == null) {
@@ -317,6 +326,19 @@ public abstract class RenderAlgo {
 			if (mp[1] > (noStOp ? 0 : (stOp * (float) mp[0] + acOp))) {
 				middleAbove = true;
 			}
+
+			planeVec1 = vertices3d[sides[i][0]];
+			subtract(vertices3d[sides[i][0]], vertices3d[sides[i][1]],
+					planeVec2);
+			subtract(vertices3d[sides[i][0]], vertices3d[sides[i][2]],
+					planeVec3);
+			// DEBUG
+			if (false) {
+				System.out.println("Side: " + i);
+				print(planeVec1, "PlaneVec1: ");
+				print(planeVec2, "PlaneVec2: ");
+				print(planeVec3, "PlaneVec3: ");
+			}
 			for (int x = Math.max(min[0], 0); x < Math.min(max[0],
 					Display.getWidth()); x++) {
 				for (int y = Math.max(min[1], 0); y < Math.min(max[1],
@@ -331,67 +353,32 @@ public abstract class RenderAlgo {
 					if ((vOp <= y && vS1 > y && vS2 > y && middleAbove)
 							|| (!middleAbove && vOp >= y && vS1 < y && vS2 < y)) {
 						if (improved) {
-							// line:
-							// y = st1*z
-							// x = st2*z
 							double st1 = ((double) (y - Display.getHeight() / 2))
-									/ (double) Display.getHeight() / fov;
+									/ (double) Display.getHeight() / fov * dist;
 							double st2 = ((double) (x - Display.getWidth() / 2))
-									/ (double) Display.getWidth() / fov;
-							// plane
-							// x = p0[0]+p*(p0[0]-p1[0])+q*(p0[0]-p2[0])
-							// ...
-							// xyzpq
-							// -1 0 st1 0 0 0
-							// 0 -1 st2 0 0 0
-							// 0 0 -1 (p0[2]-p1[2]) (p0[2]-p2[2]) -p0[2]
-							// 0 -1 0 (p0[1]-p1[1]) (p0[1]-p2[1]) -p0[1]
-							// -1 0 0 (p0[0]-p1[0]) (p0[0]-p2[0]) -p0[0]
-							double[] p0 = vertices3d[sides[i][0]];
-							double[] p1 = vertices3d[sides[i][1]];
-							double[] p2 = vertices3d[sides[i][2]];
-							eq[0][0] = -1;
-							eq[0][1] = zero;
-							eq[0][2] = st1;
-							eq[0][3] = zero;
-							eq[0][4] = zero;
-							eq[0][5] = zero;
-							eq[1][0] = zero;
-							eq[1][1] = -1;
-							eq[1][2] = st2;
-							eq[1][3] = 0;
-							eq[1][4] = 0;
-							eq[1][5] = 0;
-							eq[2][0] = zero;
-							eq[2][1] = zero;
-							eq[2][2] = -1;
-							eq[2][3] = p0[2] - p1[2];
-							eq[2][4] = p0[2] - p2[2];
-							eq[2][5] = -p0[2];
-							eq[3][0] = zero;
-							eq[3][1] = -1;
-							eq[3][2] = zero;
-							eq[3][3] = p0[1] - p1[1];
-							eq[3][4] = p0[1] - p2[1];
-							eq[3][5] = -p0[1];
-							eq[4][0] = -1;
-							eq[4][1] = zero;
-							eq[4][2] = zero;
-							eq[4][3] = p0[0] - p1[0];
-							eq[4][4] = p0[0] - p2[0];
-							eq[4][5] = -p0[0];
-
-							// { -1, 0.0001, st1, 0.0001, 0.0001, 0.0001 },
-							// { 0.0001, -1, st2, 0, 0, 0 },
-							// { 0.0001, 0.0001, -1, p0[2] - p1[2],
-							// p0[2] - p2[2], -p0[2] },
-							// { 0.0001, -1, 0.0001, p0[1] - p1[1],
-							// p0[1] - p2[1], -p0[1] },
-							// { -1, 0.0001, 0.0001, p0[0] - p1[0],
-							// p0[0] - p2[0], -p0[0] }
-							solveLGS(eq, ret);
-							double dist2 = ret[0] * ret[0] + ret[1] * ret[1]
-									+ (ret[2] + dist) * (ret[2] + dist);
+									/ (double) Display.getWidth() / fov * dist;
+							// line through 0|0|-dist and st1|st2|0
+							// TODO dist is 1 not dist
+							lineVec2[0] = st1;
+							lineVec2[1] = st2;
+							lineVec2[2] = -1;
+							// lV1+c*lV2=pV1+a*pV2+b*pV3
+							// -a*pV2-b*pV3+c*lV2=pV1-lV1
+							for (int i2 = 0; i2 < 3; i2++) {
+								eq[i2][0] = planeVec2[i2] != 0 ? -planeVec2[i2]
+										: zero;
+								eq[i2][1] = planeVec3[i2] != 0 ? -planeVec3[i2]
+										: zero;
+								eq[i2][2] = lineVec2[i2] != 0 ? lineVec2[i2]
+										: zero;
+								eq[i2][3] = planeVec1[i2] - lineVec1[i2];
+							}
+							solveLGS(eq, sol);
+							for (int i2 = 0; i2 < 2; i2++) {
+								sol2[i2] = lineVec1[i2] + lineVec2[i2] * sol[2];
+							}
+							double dist2 = sol2[0] * sol2[0] + sol2[1]
+									* sol2[1] + sol2[2] * sol2[2];
 							dens[x][y] += 6 / (dist2);
 						} else {
 							dens[x][y]++;
@@ -536,5 +523,18 @@ public abstract class RenderAlgo {
 			}
 			ret[i] = system[i][varCount] / system[i][i];
 		}
+	}
+
+	protected void subtract(double[] vec1, double[] vec2, double[] out) {
+		for (int i = 0; i < vec1.length; i++) {
+			out[i] = vec1[i] - vec2[i];
+		}
+	}
+
+	private void print(double[] d, String out) {
+		for (double i : d) {
+			out += i + ":";
+		}
+		System.out.println(out);
 	}
 }
